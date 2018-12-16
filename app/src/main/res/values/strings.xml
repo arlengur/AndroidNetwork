@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">AndroidNetwork</string>
+    <string name="day_text">Day: %1$.2f</string>
+    <string name="min_text">Min: %1$.2f</string>
+    <string name="max_text">Max: %1$.2f</string>
+    <string name="night_text">Night: %1$.2f</string>
+    <string name="eve_text">Eve: %1$.2f</string>
+    <string name="morn_text">Morn: %1$.2f</string>
+</resources>
