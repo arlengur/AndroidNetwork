@@ -14,9 +14,9 @@ import ru.arlen.androidnetwork.model.DayWeather;
 import ru.arlen.androidnetwork.model.Weather;
 
 import static ru.arlen.androidnetwork.MainActivity.CITY;
+import static ru.arlen.androidnetwork.RecyclerWeatherAdapter.POSITION;
 
 public class DetailActivity extends Activity implements IActivityCallbacks {
-    public static final String POSITION = "position";
     private RetrofitService mRetrofitService;
 
     private ServiceConnection mServiceConnection = new ServiceConnection() {
