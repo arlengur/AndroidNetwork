@@ -1,26 +1,36 @@
 package ru.arlen.androidnetwork;
 
 import android.app.Activity;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.os.Bundle;
-import android.util.Log;
+import android.os.IBinder;
 import android.view.View;
 import android.widget.TextView;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
-import retrofit2.Retrofit;
-import retrofit2.converter.gson.GsonConverterFactory;
 import ru.arlen.androidnetwork.model.DayTemp;
 import ru.arlen.androidnetwork.model.DayWeather;
 import ru.arlen.androidnetwork.model.Weather;
 
-import static ru.arlen.androidnetwork.MainActivity.*;
+import static ru.arlen.androidnetwork.MainActivity.CITY;
 
-public class DetailActivity extends Activity {
+public class DetailActivity extends Activity implements IActivityCallbacks {
     public static final String POSITION = "position";
-    public static final String DETAIL_ACTIVITY_TAG = "DetailActivity";
-    private Weather weather;
+    private RetrofitService mRetrofitService;
+
+    private ServiceConnection mServiceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            mRetrofitService = ((RetrofitService.MyBinder) service).getService(DetailActivity.this);
+            mRetrofitService.getWeather();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            mRetrofitService = null;
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,43 +39,6 @@ public class DetailActivity extends Activity {
 
         final TextView city = findViewById(R.id.cityTextView);
         city.setText(CITY);
-        final TextView day = findViewById(R.id.dayTextView);
-        final TextView min = findViewById(R.id.minTextView);
-        final TextView max = findViewById(R.id.maxTextView);
-        final TextView night = findViewById(R.id.nightTextView);
-        final TextView eve = findViewById(R.id.eveTextView);
-        final TextView morn = findViewById(R.id.mornTextView);
-
-        Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl(BASE_URL)
-                .addConverterFactory(GsonConverterFactory.create())
-                .build();
-
-        final String days = getIntent().getStringExtra(POSITION);
-        WebAPI webAPI = retrofit.create(WebAPI.class);
-        final Call<Weather> weatherCall = webAPI
-                .getWeather(CITY, METRIC_CELSIUS, days, USER_KEY);
-        weatherCall.enqueue(new Callback<Weather>() {
-            @Override
-            public void onResponse(Call<Weather> call, Response<Weather> response) {
-                weather = response.body();
-                DayWeather dayWeather = weather.getList()[(Integer.parseInt(days)-1)];
-                DayTemp dayTemp = dayWeather.getTemp();
-
-                day.setText(String.format(getResources().getString(R.string.day_text), dayTemp.getDay()));
-                min.setText(String.format(getResources().getString(R.string.min_text), dayTemp.getMin()));
-                max.setText(String.format(getResources().getString(R.string.max_text), dayTemp.getMax()));
-                night.setText(String.format(getResources().getString(R.string.night_text), dayTemp.getNight()));
-                eve.setText(String.format(getResources().getString(R.string.eve_text), dayTemp.getEve()));
-                morn.setText(String.format(getResources().getString(R.string.morn_text), dayTemp.getMorn()));
-            }
-
-            @Override
-            public void onFailure(Call<Weather> call, Throwable t) {
-                Log.w(DETAIL_ACTIVITY_TAG, t.getMessage());
-
-            }
-        });
 
         View close = findViewById(R.id.closeBtn);
         close.setOnClickListener(new View.OnClickListener() {
@@ -74,5 +47,38 @@ public class DetailActivity extends Activity {
                 startActivity(new Intent(DetailActivity.this, MainActivity.class));
             }
         });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        bindService(RetrofitService.newIntent(this), mServiceConnection, Context.BIND_AUTO_CREATE);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        unbindService(mServiceConnection);
+    }
+
+    @Override
+    public void dataReceived(Weather weather) {
+        final String days = getIntent().getStringExtra(POSITION);
+        DayWeather dayWeather = weather.getList()[(Integer.parseInt(days) - 1)];
+        DayTemp dayTemp = dayWeather.getTemp();
+
+        TextView day = findViewById(R.id.dayTextView);
+        TextView min = findViewById(R.id.minTextView);
+        TextView max = findViewById(R.id.maxTextView);
+        TextView night = findViewById(R.id.nightTextView);
+        TextView eve = findViewById(R.id.eveTextView);
+        TextView morn = findViewById(R.id.mornTextView);
+
+        day.setText(String.format(getResources().getString(R.string.day_text), dayTemp.getDay()));
+        min.setText(String.format(getResources().getString(R.string.min_text), dayTemp.getMin()));
+        max.setText(String.format(getResources().getString(R.string.max_text), dayTemp.getMax()));
+        night.setText(String.format(getResources().getString(R.string.night_text), dayTemp.getNight()));
+        eve.setText(String.format(getResources().getString(R.string.eve_text), dayTemp.getEve()));
+        morn.setText(String.format(getResources().getString(R.string.morn_text), dayTemp.getMorn()));
     }
 }

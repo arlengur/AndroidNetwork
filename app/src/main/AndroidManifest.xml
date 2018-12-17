@@ -20,6 +20,8 @@
         </activity>
         <activity android:name=".DetailActivity">
         </activity>
+
+        <service android:name=".RetrofitService"/>
     </application>
 
 </manifest>

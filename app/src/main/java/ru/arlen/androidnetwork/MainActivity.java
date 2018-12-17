@@ -2,19 +2,17 @@ package ru.arlen.androidnetwork;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.os.Bundle;
-import android.util.Log;
+import android.os.IBinder;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
-import retrofit2.Retrofit;
-import retrofit2.converter.gson.GsonConverterFactory;
 import ru.arlen.androidnetwork.model.DayWeather;
 import ru.arlen.androidnetwork.model.Weather;
 
@@ -23,13 +21,23 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements IActivityCallbacks {
     public static final String POSITION = "position";
-    public static final String BASE_URL = "https://api.openweathermap.org/";
-    public static final String METRIC_CELSIUS = "metric";
-    public static final String USER_KEY = "eb8b1a9405e659b2ffc78f0a520b1a46";
     public static final String CITY = "Moscow";
-    private Weather weather;
+    private RetrofitService mRetrofitService;
+
+    private ServiceConnection mServiceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            mRetrofitService = ((RetrofitService.MyBinder) service).getService(MainActivity.this);
+            mRetrofitService.getWeather();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            mRetrofitService = null;
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,38 +47,25 @@ public class MainActivity extends Activity {
         final TextView city = findViewById(R.id.cityTextView);
         city.setText(CITY);
 
-        Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl(BASE_URL)
-                .addConverterFactory(GsonConverterFactory.create())
-                .build();
-
-        WebAPI webAPI = retrofit.create(WebAPI.class);
-        final Call<Weather> weatherCall = webAPI
-                .getWeather(CITY, METRIC_CELSIUS, "10", USER_KEY);
-        weatherCall.enqueue(new Callback<Weather>() {
+        View refresh = findViewById(R.id.refreshBtn);
+        refresh.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onResponse(Call<Weather> call, Response<Weather> response) {
-                weather = response.body();
-                final ListView titlesList = findViewById(R.id.listDays);
-                ArrayAdapter<String> adapter = new ArrayAdapter<>(MainActivity.this,
-                        android.R.layout.simple_list_item_1, getDaysTemp(weather));
-                titlesList.setAdapter(adapter);
-                titlesList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                    @Override
-                    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                        Intent intent = new Intent(MainActivity.this, DetailActivity.class);
-                        intent.putExtra(POSITION, String.valueOf(position+1));
-                        startActivity(intent);
-                    }
-                });
-            }
-
-            @Override
-            public void onFailure(Call<Weather> call, Throwable t) {
-                System.out.println("Error: " + t.getMessage());
-
+            public void onClick(View v) {
+                mRetrofitService.getWeather();
             }
         });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        bindService(RetrofitService.newIntent(this), mServiceConnection, Context.BIND_AUTO_CREATE);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        unbindService(mServiceConnection);
     }
 
     private List<String> getDaysTemp(Weather weather) {
@@ -85,5 +80,21 @@ public class MainActivity extends Activity {
             listTemp.add(date + ": " + temp);
         }
         return listTemp;
+    }
+
+    @Override
+    public void dataReceived(Weather weather) {
+        final ListView titlesList = findViewById(R.id.listDays);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(MainActivity.this,
+                android.R.layout.simple_list_item_1, getDaysTemp(weather));
+        titlesList.setAdapter(adapter);
+        titlesList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Intent intent = new Intent(MainActivity.this, DetailActivity.class);
+                intent.putExtra(POSITION, String.valueOf(position+1));
+                startActivity(intent);
+            }
+        });
     }
 }
