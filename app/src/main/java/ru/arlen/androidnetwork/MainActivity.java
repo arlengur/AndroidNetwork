@@ -7,6 +7,7 @@ import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 import ru.arlen.androidnetwork.model.Weather;
@@ -18,12 +19,16 @@ public class MainActivity extends Activity implements IActivityCallbacks {
     private ServiceConnection mServiceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
-            mRetrofitService = ((RetrofitService.MyBinder) service).getService(MainActivity.this);
+            mRetrofitService = ((RetrofitService.MyBinder) service).getService();
+            Log.w("qwerty", "add");
+            mRetrofitService.addCallback(MainActivity.this);
             mRetrofitService.getWeather();
         }
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
+            Log.w("qwerty", "remove");
+            mRetrofitService.removeCallback(MainActivity.this);
             mRetrofitService = null;
         }
     };

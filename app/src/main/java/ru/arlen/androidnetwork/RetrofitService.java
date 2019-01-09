@@ -12,19 +12,28 @@ import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 import ru.arlen.androidnetwork.model.Weather;
 
+import java.util.concurrent.CopyOnWriteArrayList;
+
 public class RetrofitService extends Service {
     private static final String BASE_URL = "https://api.openweathermap.org/";
     private static final String METRIC_CELSIUS = "metric";
     private static final String USER_KEY = "eb8b1a9405e659b2ffc78f0a520b1a46";
     private static final String CITY = "Moscow";
-    private IActivityCallbacks mCallbacks;
+    private CopyOnWriteArrayList<IActivityCallbacks> mCallbacks = new CopyOnWriteArrayList<>();
     private IBinder mBinder = new MyBinder();
 
     public class MyBinder extends Binder {
-        RetrofitService getService(IActivityCallbacks callbacks) {
-            mCallbacks = callbacks;
+        RetrofitService getService() {
             return RetrofitService.this;
         }
+    }
+
+    void addCallback(IActivityCallbacks callback) {
+        mCallbacks.add(callback);
+    }
+
+    void removeCallback(IActivityCallbacks callback) {
+        mCallbacks.add(callback);
     }
 
     @Override
@@ -49,8 +58,11 @@ public class RetrofitService extends Service {
         weatherCall.enqueue(new Callback<Weather>() {
             @Override
             public void onResponse(Call<Weather> call, Response<Weather> response) {
-                mCallbacks.dataReceived(response.body());
+                for (IActivityCallbacks callback : mCallbacks) {
+                    callback.dataReceived(response.body());
+                }
             }
+
             @Override
             public void onFailure(Call<Weather> call, Throwable t) {
                 System.out.println("Error: " + t.getMessage());
@@ -59,7 +71,7 @@ public class RetrofitService extends Service {
         });
     }
 
-    public static Intent newIntent(Context context){
+    public static Intent newIntent(Context context) {
         return new Intent(context, RetrofitService.class);
     }
 }

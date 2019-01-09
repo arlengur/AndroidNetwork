@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 import ru.arlen.androidnetwork.model.DayTemp;
@@ -22,12 +23,16 @@ public class DetailActivity extends Activity implements IActivityCallbacks {
     private ServiceConnection mServiceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
-            mRetrofitService = ((RetrofitService.MyBinder) service).getService(DetailActivity.this);
+            mRetrofitService = ((RetrofitService.MyBinder) service).getService();
+            Log.w("qwerty", "det add");
+            mRetrofitService.addCallback(DetailActivity.this);
             mRetrofitService.getWeather();
         }
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
+            Log.w("qwerty", "det remove");
+            mRetrofitService.removeCallback(DetailActivity.this);
             mRetrofitService = null;
         }
     };
